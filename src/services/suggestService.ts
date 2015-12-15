@@ -283,10 +283,13 @@ export default class SuggestService {
         return result;
     }
 
-    private firstDanglingParen(line: string, position: number): number {
+    private firstDanglingParen(document: vscode.TextDocument, position: vscode.Position): vscode.Position {
+        let text = document.getText();
+        let offset = document.offsetAt(position) - 1;
         let currentDepth = 0;
-        for (let i = position; i >= 0; i--) {
-            let char = line.charAt(i);
+
+        while (offset > 0) {
+            let char = text.charAt(offset);
 
             if (char === ')') {
                 currentDepth += 1;
@@ -295,10 +298,13 @@ export default class SuggestService {
             }
 
             if (currentDepth === -1) {
-                return i;
+                return document.positionAt(offset);
             }
+
+            offset--;
         }
-        return -1;
+
+        return null;
     }
 
     private signatureHelpProvider(document: vscode.TextDocument, position: vscode.Position): Thenable<vscode.SignatureHelp> {
@@ -306,12 +312,12 @@ export default class SuggestService {
         let line = document.lineAt(position.line);
 
         // Get the first dangling parenthesis, so we don't stop on a function call used as a previous parameter
-        let callPosition = this.firstDanglingParen(line.text, position.character - 1);
-        if (callPosition === -1) {
-            return;
+        let callPosition = this.firstDanglingParen(document, position);
+        if (!callPosition) {
+            return null;
         }
 
-        let command = `complete-with-snippet ${position.line + 1} ${callPosition} ${document.fileName} ${this.tmpFile}\n`;
+        let command = `complete-with-snippet ${callPosition.line + 1} ${callPosition.character - 1} ${document.fileName} ${this.tmpFile}\n`;
         return this.runCommand(command).then((lines) => {
             lines = lines.map(l => l.trim()).join('').split('MATCH ').slice(1);
             if (lines.length === 0) {
