@@ -238,10 +238,10 @@ export default class SuggestService {
         return [parameters, parameterStart, parameterEnd];
     }
 
-    private parseCall(name: string, line: string, definition: string, position: number): vscode.SignatureHelp {
+    private parseCall(name: string, line: string, definition: string): vscode.SignatureHelp {
         let nameEnd = definition.indexOf(name) + name.length;
         let [params, paramStart, paramEnd] = this.parseParameters(definition, nameEnd);
-        let [callParameters] = this.parseParameters(line, line.indexOf(name) + name.length, position);
+        let [callParameters] = this.parseParameters(line, 0);
         let currentParameter = callParameters.length - 1;
 
         let nameTemplate = definition.substring(0, paramStart);
@@ -309,7 +309,6 @@ export default class SuggestService {
 
     private signatureHelpProvider(document: vscode.TextDocument, position: vscode.Position): Thenable<vscode.SignatureHelp> {
         this.updateTmpFile(document);
-        let line = document.lineAt(position.line);
 
         // Get the first dangling parenthesis, so we don't stop on a function call used as a previous parameter
         let callPosition = this.firstDanglingParen(document, position);
@@ -333,7 +332,8 @@ export default class SuggestService {
                 return null;
             }
 
-            return this.parseCall(name, line.text, definition, position.character);
+            let argsText = document.getText(new vscode.Range(callPosition, position));
+            return this.parseCall(name, argsText, definition);
         });
     }
 
