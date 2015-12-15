@@ -295,6 +295,8 @@ export default class SuggestService {
                 currentDepth += 1;
             } else if (char === '(') {
                 currentDepth -= 1;
+            } else if (char === '{') {
+                return null; // not inside function call
             }
 
             if (currentDepth === -1) {
